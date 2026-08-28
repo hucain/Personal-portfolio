@@ -1,0 +1,398 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================
+    // ADMIN
+    // =========================
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email == 'hucainomar490@gmail.com';
+    }
+
+    function hasOnlyKeys(keys) {
+      return request.resource.data.keys().hasOnly(keys);
+    }
+
+    function updateOnly(keys) {
+      return request.resource.data
+        .diff(resource.data)
+        .affectedKeys()
+        .hasOnly(keys);
+    }
+
+
+    // =========================
+    // MESSAGES
+    // =========================
+    match /messages/{messageId} {
+
+      // Visitors can submit messages.
+      // Only the exact fields below are accepted.
+      allow create: if
+        request.auth == null
+        && hasOnlyKeys([
+          'name',
+          'email',
+          'subject',
+          'type',
+          'message',
+          'createdAt',
+          'replied',
+          'reply'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.email is string
+        && request.resource.data.subject is string
+        && request.resource.data.type is string
+        && request.resource.data.message is string
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.replied is bool
+        && request.resource.data.reply is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.email.size() >= 5
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.subject.size() >= 1
+        && request.resource.data.subject.size() <= 200
+        && request.resource.data.type.size() >= 1
+        && request.resource.data.type.size() <= 40
+        && request.resource.data.message.size() >= 1
+        && request.resource.data.message.size() <= 5000
+        && request.resource.data.replied == false
+        && request.resource.data.reply.size() == 0
+        && request.resource.data.createdAt >= request.time - duration.value(1, 'h')
+        && request.resource.data.createdAt <= request.time;
+
+      // Only admin can read messages.
+      allow read: if isAdmin();
+
+      // Only admin can reply.
+      allow update: if
+        isAdmin()
+        && updateOnly([
+          'reply',
+          'replied',
+          'repliedAt'
+        ])
+        && request.resource.data.reply is string
+        && request.resource.data.replied is bool
+        && request.resource.data.replied == true
+        && request.resource.data.reply.size() <= 2000
+        && request.resource.data.repliedAt is timestamp;
+
+      // Only admin can delete messages.
+      allow delete: if isAdmin();
+    }
+
+
+    // =========================
+    // PROJECTS
+    // =========================
+    match /projects/{docId} {
+
+      allow read: if true;
+
+      allow create: if
+        isAdmin()
+        && hasOnlyKeys([
+          'title',
+          'detail',
+          'status',
+          'href',
+          'order'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 1
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.detail is string
+        && request.resource.data.detail.size() <= 2000
+        && request.resource.data.status is string
+        && request.resource.data.status.size() <= 40
+        && request.resource.data.href is string
+        && request.resource.data.href.size() <= 500
+        && request.resource.data.order is number;
+
+      allow update: if
+        isAdmin()
+        && updateOnly([
+          'title',
+          'detail',
+          'status',
+          'href',
+          'order'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 1
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.detail is string
+        && request.resource.data.detail.size() <= 2000
+        && request.resource.data.status is string
+        && request.resource.data.status.size() <= 40
+        && request.resource.data.href is string
+        && request.resource.data.href.size() <= 500
+        && request.resource.data.order is number;
+
+      allow delete: if isAdmin();
+    }
+
+
+    // =========================
+    // STACK
+    // =========================
+    match /stack/{docId} {
+
+      allow read: if true;
+
+      allow create: if
+        isAdmin()
+        && hasOnlyKeys([
+          'name',
+          'blurb',
+          'accent',
+          'key',
+          'group',
+          'order'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 60
+        && request.resource.data.blurb is string
+        && request.resource.data.blurb.size() <= 300
+        && request.resource.data.accent is string
+        && request.resource.data.accent.size() <= 12
+        && request.resource.data.key is string
+        && request.resource.data.key.size() <= 20
+        && request.resource.data.group in ['core', 'framework']
+        && request.resource.data.order is number;
+
+      allow update: if
+        isAdmin()
+        && updateOnly([
+          'name',
+          'blurb',
+          'accent',
+          'key',
+          'group',
+          'order'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 60
+        && request.resource.data.blurb is string
+        && request.resource.data.blurb.size() <= 300
+        && request.resource.data.accent is string
+        && request.resource.data.accent.size() <= 12
+        && request.resource.data.key is string
+        && request.resource.data.key.size() <= 20
+        && request.resource.data.group in ['core', 'framework']
+        && request.resource.data.order is number;
+
+      allow delete: if isAdmin();
+    }
+
+
+    // =========================
+    // WORK ROLES
+    // =========================
+    match /workRoles/{docId} {
+
+      allow read: if true;
+
+      allow create: if
+        isAdmin()
+        && hasOnlyKeys([
+          'period',
+          'title',
+          'place',
+          'summary',
+          'points',
+          'order'
+        ])
+        && request.resource.data.period is string
+        && request.resource.data.period.size() <= 40
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 1
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.place is string
+        && request.resource.data.place.size() <= 80
+        && request.resource.data.summary is string
+        && request.resource.data.summary.size() <= 2000
+        && request.resource.data.points is list
+        && request.resource.data.points.size() <= 12
+        && request.resource.data.order is number;
+
+      allow update: if
+        isAdmin()
+        && updateOnly([
+          'period',
+          'title',
+          'place',
+          'summary',
+          'points',
+          'order'
+        ])
+        && request.resource.data.period is string
+        && request.resource.data.period.size() <= 40
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 1
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.place is string
+        && request.resource.data.place.size() <= 80
+        && request.resource.data.summary is string
+        && request.resource.data.summary.size() <= 2000
+        && request.resource.data.points is list
+        && request.resource.data.points.size() <= 12
+        && request.resource.data.order is number;
+
+      allow delete: if isAdmin();
+    }
+
+
+    // =========================
+    // WORK FOCUS
+    // =========================
+    match /workFocus/{docId} {
+
+      allow read: if true;
+
+      allow create: if
+        isAdmin()
+        && hasOnlyKeys([
+          'title',
+          'detail',
+          'order'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 1
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.detail is string
+        && request.resource.data.detail.size() <= 2000
+        && request.resource.data.order is number;
+
+      allow update: if
+        isAdmin()
+        && updateOnly([
+          'title',
+          'detail',
+          'order'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 1
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.detail is string
+        && request.resource.data.detail.size() <= 2000
+        && request.resource.data.order is number;
+
+      allow delete: if isAdmin();
+    }
+
+
+    // =========================
+    // CERTIFICATES
+    // =========================
+    match /certificates/{docId} {
+
+      allow read: if true;
+
+      allow create: if
+        isAdmin()
+        && hasOnlyKeys([
+          'title',
+          'issuer',
+          'year',
+          'credentialId',
+          'href',
+          'order'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 1
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.issuer is string
+        && request.resource.data.issuer.size() >= 1
+        && request.resource.data.issuer.size() <= 120
+        && request.resource.data.year is string
+        && request.resource.data.year.size() <= 12
+        && request.resource.data.credentialId is string
+        && request.resource.data.credentialId.size() <= 120
+        && request.resource.data.href is string
+        && request.resource.data.href.size() <= 500
+        && request.resource.data.order is number;
+
+      allow update: if
+        isAdmin()
+        && updateOnly([
+          'title',
+          'issuer',
+          'year',
+          'credentialId',
+          'href',
+          'order'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 1
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.issuer is string
+        && request.resource.data.issuer.size() >= 1
+        && request.resource.data.issuer.size() <= 120
+        && request.resource.data.year is string
+        && request.resource.data.year.size() <= 12
+        && request.resource.data.credentialId is string
+        && request.resource.data.credentialId.size() <= 120
+        && request.resource.data.href is string
+        && request.resource.data.href.size() <= 500
+        && request.resource.data.order is number;
+
+      allow delete: if isAdmin();
+    }
+
+
+    // =========================
+    // CONTACT INFO
+    // =========================
+    match /contactInfo/{docId} {
+
+      allow read: if true;
+
+      allow create: if
+        isAdmin()
+        && hasOnlyKeys([
+          'label',
+          'value',
+          'icon',
+          'order'
+        ])
+        && request.resource.data.label is string
+        && request.resource.data.label.size() >= 1
+        && request.resource.data.label.size() <= 80
+        && request.resource.data.value is string
+        && request.resource.data.value.size() >= 1
+        && request.resource.data.value.size() <= 254
+        && request.resource.data.icon is string
+        && request.resource.data.icon.size() <= 20
+        && request.resource.data.order is number;
+
+      allow update: if
+        isAdmin()
+        && updateOnly([
+          'label',
+          'value',
+          'icon',
+          'order'
+        ])
+        && request.resource.data.label is string
+        && request.resource.data.label.size() >= 1
+        && request.resource.data.label.size() <= 80
+        && request.resource.data.value is string
+        && request.resource.data.value.size() >= 1
+        && request.resource.data.value.size() <= 254
+        && request.resource.data.icon is string
+        && request.resource.data.icon.size() <= 20
+        && request.resource.data.order is number;
+
+      allow delete: if isAdmin();
+    }
+  }
+}
