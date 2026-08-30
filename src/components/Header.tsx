@@ -93,7 +93,7 @@ export function Header() {
             aria-label="Back to top"
           >
             <img
-              src="/logo.png"
+              src="/favicon.png"
               alt="HU logo"
               className="h-10 w-10 rounded-xl object-contain"
               width={40}

@@ -30,8 +30,7 @@ export function Work() {
           <motion.div
             variants={stagger}
             initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.1 }}
+            animate="visible"
             className="space-y-5"
           >
             {roles.map((role) => (
@@ -49,8 +48,7 @@ export function Work() {
                 <motion.ul
                   variants={stagger}
                   initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true, amount: 0.3 }}
+                  animate="visible"
                   className="mt-6 space-y-3"
                 >
                   {(role.points || []).map((point) => (
@@ -67,8 +65,7 @@ export function Work() {
           <motion.div
             variants={stagger}
             initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.1 }}
+            animate="visible"
             className="space-y-4"
           >
             {focus.map((item) => (

@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AtSign, Check, Clock3, Globe, Mail, MapPin, Phone, Send } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { fallbackContactInfo, watchContactInfo } from "../content";
-import { openGmailContact, sendContactEmailJS } from "../emailjs";
+import { sendContactEmailJS } from "../emailjs";
 import { sendContactMessage, type ContactMessage, type ContactInfoItem } from "../firebase";
 import { canSendContactForm, recordContactSend } from "../security";
 import { SectionHeading, fadeUp, stagger } from "./ui";
@@ -34,7 +34,7 @@ const initial: FormState = {
   message: "",
 };
 
-const types = ["A project", "A collaboration", "An internship", "Just saying hi"];
+const types = ["A project", "A collaboration", "An internship", "Just saying hi", "Other"];
 
 function validate(values: FormState): FormErrors {
   const errors: FormErrors = {};
@@ -88,14 +88,8 @@ export function Contact() {
       setSubmitted(true);
       recordContactSend();
 
-      // Also try to send email notification
-      // If EmailJS is configured → send silently in background
-      // If not → open Gmail compose so admin sees it
-      const emailSent = await sendContactEmailJS(values);
-      if (!emailSent) {
-        // EmailJS not configured — open Gmail so admin gets notified
-        openGmailContact(values);
-      }
+      // Send email notification to admin via EmailJS (free, no popup)
+      void sendContactEmailJS(values);
     } catch {
       setSubmitError("Could not deliver your note right now. Please try again.");
     } finally {
@@ -282,6 +276,7 @@ export function Contact() {
             className="space-y-3 sm:space-y-4"
           >
             {contactItems.map((item) => {
+              const isCustomIcon = !contactIcons[item.icon];
               const Icon = contactIcons[item.icon] || AtSign;
               return (
                 <motion.div
@@ -292,7 +287,11 @@ export function Contact() {
                   className="card-glow-border flex items-start gap-3 rounded-3xl border border-ink/10 bg-surface/70 px-5 py-4 backdrop-blur-sm transition-colors hover:border-accent/25"
                 >
                   <span className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-canvas text-accent">
-                    <Icon className="h-4 w-4" />
+                    {isCustomIcon ? (
+                      <span className="text-lg" role="img" aria-label={item.label}>{item.icon}</span>
+                    ) : (
+                      <Icon className="h-4 w-4" />
+                    )}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted sm:text-xs sm:tracking-[0.16em]">

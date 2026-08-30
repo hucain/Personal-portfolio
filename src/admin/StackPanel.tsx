@@ -14,6 +14,7 @@ const empty = {
   key: "js",
   group: "core" as StackItem["group"],
   order: 0,
+  customIcon: "",
 };
 
 const iconPresets = [
@@ -24,6 +25,7 @@ const iconPresets = [
   { key: "react", label: "React.js", accent: "#7dd3e8" },
   { key: "angular", label: "Angular", accent: "#f08a9a" },
   { key: "vue", label: "Vue.js", accent: "#7dcea0" },
+  { key: "custom", label: "Custom (upload icon)", accent: "#d4b483" },
 ];
 
 export function StackPanel() {
@@ -50,13 +52,15 @@ export function StackPanel() {
 
   const openEdit = (item: StackItem) => {
     setEditing(item.id);
+    const isCustom = !iconPresets.some((p) => p.key === item.key);
     setForm({
       name: item.name,
       blurb: item.blurb,
       accent: item.accent || "#d4b483",
-      key: item.key || "js",
+      key: isCustom ? "custom" : item.key,
       group: item.group || "core",
       order: item.order ?? 0,
+      customIcon: isCustom ? item.key : "",
     });
     setError("");
     setModalOpen(true);
@@ -69,14 +73,17 @@ export function StackPanel() {
     }
     setBusy(true);
     try {
-      const payload = {
-        name: form.name.trim(),
-        blurb: form.blurb.trim(),
-        accent: form.accent.trim() || "#d4b483",
-        key: form.key.trim() || "js",
-        group: form.group,
-        order: Number(form.order) || items.length,
-      };
+    const iconKey = form.key === "custom"
+      ? (form.customIcon.trim() || form.name.trim().slice(0, 2).toUpperCase())
+      : form.key;
+    const payload = {
+      name: form.name.trim(),
+      blurb: form.blurb.trim(),
+      accent: form.accent.trim() || "#d4b483",
+      key: iconKey,
+      group: form.group,
+      order: Number(form.order) || items.length,
+    };
       if (editing) {
         await saveDoc("stack", editing, payload);
         toast("Stack item updated.");
@@ -311,6 +318,13 @@ export function StackPanel() {
                     </select>
                   </label>
                 </div>
+                {form.key === "custom" ? (
+                  <Field
+                    label="Custom Icon (first 2 letters, e.g. PY, RB, GO)"
+                    value={form.customIcon || ""}
+                    onChange={(val) => setForm((f) => ({ ...f, customIcon: val }))}
+                  />
+                ) : null}
 
                 <Field
                   label="Human Commentary (blurb)"

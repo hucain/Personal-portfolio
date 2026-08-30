@@ -1,5 +1,4 @@
 import { initializeApp } from "firebase/app";
-import { sendContactEmailJS, sendReplyEmailJS } from "./emailjs";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -518,14 +517,9 @@ export async function sendContactMessage(payload: ContactMessage): Promise<SendR
     });
     if (!response.ok) return { ok: false, error: explain() };
 
-    // Send email notification to admin via EmailJS (client-side fallback)
-    void sendContactEmailJS({
-      name: data.name,
-      email: data.email,
-      subject: data.subject,
-      type: data.type,
-      message: data.message,
-    });
+    // Email notification is handled by the Cloud Function (handleContactForm)
+    // which sends via Nodemailer + Gmail SMTP on the server side.
+    // No client-side email calls needed.
 
     return { ok: true, source: "firestore", id, data: { ...data, id } };
   } catch {
@@ -534,18 +528,37 @@ export async function sendContactMessage(payload: ContactMessage): Promise<SendR
 }
 
 export async function fetchDocs<T extends { id: string }>(name: string): Promise<T[]> {
-  const snap = await getDocs(collection(db, name));
-  const items = snap.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as T);
-  return [...items].sort((a, b) => {
-    const left = (a as { order?: number }).order ?? 0;
-    const right = (b as { order?: number }).order ?? 0;
-    return left - right;
-  });
+  const colRef = collection(db, name);
+  const sortItems = (items: T[]) =>
+    [...items].sort((a, b) => ((a as { order?: number }).order ?? 0) - ((b as { order?: number }).order ?? 0));
+
+  // Primary: ordered query
+  try {
+    const q = query(colRef, orderBy("order", "asc"));
+    const snap = await getDocs(q);
+    return sortItems(snap.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as T));
+  } catch {
+    // Ordered query failed (doc missing 'order' field) — fall back to unordered
+  }
+
+  try {
+    const snap = await getDocs(colRef);
+    return sortItems(snap.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as T));
+  } catch {
+    return [];
+  }
 }
 
 // Real-time listener: calls `onData` whenever the collection changes.
 // Returns an unsubscribe function. Sorted by `order` field ascending,
 // then by `createdAt` descending for messages.
+//
+// Strategy: start BOTH an ordered query AND an unordered listener.
+// The ordered query gives server-sorted results (preferred).
+// If it fails (e.g. a document is missing the `order` field), we
+// ignore its results and rely on the unordered listener + client sort.
+// This guarantees `onData` is always called with current data —
+// no race condition, no stale gap.
 export function watchDocs<T extends { id: string }>(
   name: string,
   onData: (items: T[]) => void,
@@ -556,49 +569,67 @@ export function watchDocs<T extends { id: string }>(
   const sortItems = (items: T[]) =>
     [...items].sort((a, b) => ((a as { order?: number }).order ?? 0) - ((b as { order?: number }).order ?? 0));
 
-  // Primary: ordered query.  If any document is missing the sort field,
-  // Firestore rejects the entire query — so we fall back to an unordered
-  // listener and sort client-side.
+  const mapDocs = (snap: { docs: { id: string; data: () => Record<string, unknown> }[] }) => {
+    const items = snap.docs.map((entry) => ({
+      id: entry.id,
+      ...entry.data(),
+    }) as T);
+    return name === "messages" ? items : sortItems(items);
+  };
+
+  // ── Unordered listener (always works, never fails) ──────────────
+  // This is the guaranteed data source. Even if the ordered query
+  // succeeds, we use its data as a "nice to have" override.
+  let useOrdered = true; // assume ordered works until proven otherwise
+  let unorderedData: T[] | null = null;
+
+  const unorderedUnsub = onSnapshot(
+    colRef,
+    (snap) => {
+      unorderedData = mapDocs(snap);
+      // If ordered is still working, let it drive onData.
+      // Only use unordered data when ordered has failed.
+      if (!useOrdered) {
+        onData(unorderedData);
+      }
+    },
+    (err) => {
+      if (import.meta.env.DEV) console.error(`watchDocs(${name}) unordered query failed`, err);
+      onError?.(err);
+    },
+  );
+
+  // ── Ordered query (preferred, may fail) ────────────────────────
   const q = name === "messages"
     ? query(colRef, orderBy("createdAt", "desc"))
     : query(colRef, orderBy("order", "asc"));
 
-  let fallbackUnsub: (() => void) | null = null;
+  let orderedData: T[] | null = null;
 
-  const unsub = onSnapshot(
+  const orderedUnsub = onSnapshot(
     q,
     (snap) => {
-      const items = snap.docs.map((entry) => ({
-        id: entry.id,
-        ...entry.data(),
-      }) as T);
-      onData(name === "messages" ? items : sortItems(items));
+      orderedData = mapDocs(snap);
+      // Ordered query works — use its server-sorted results
+      onData(orderedData);
     },
     (err) => {
-      if (import.meta.env.DEV) console.warn(`watchDocs(${name}) ordered query failed, falling back to unordered`, err);
-      // The ordered query broke (usually a document missing the sort field).
-      // Switch to an unordered snapshot so data still flows to the component.
-      fallbackUnsub?.();
-      fallbackUnsub = onSnapshot(
-        colRef,
-        (snap) => {
-          const items = snap.docs.map((entry) => ({
-            id: entry.id,
-            ...entry.data(),
-          }) as T);
-          onData(name === "messages" ? items : sortItems(items));
-        },
-        (fallbackErr) => {
-          if (import.meta.env.DEV) console.error(`watchDocs(${name}) fallback also failed`, fallbackErr);
-          onError?.(fallbackErr);
-        },
-      );
+      // Ordered query failed (doc missing sort field).
+      // Switch to unordered data immediately.
+      if (useOrdered) {
+        useOrdered = false;
+        if (import.meta.env.DEV) console.warn(`watchDocs(${name}) ordered query failed, using unordered`, err);
+        // Deliver whatever the unordered listener has already collected
+        if (unorderedData) {
+          onData(unorderedData);
+        }
+      }
     },
   );
 
   return () => {
-    unsub();
-    fallbackUnsub?.();
+    orderedUnsub();
+    unorderedUnsub();
   };
 }
 
@@ -647,6 +678,27 @@ export async function deleteContactInfo(id: string) {
   await removeDoc("contactInfo", id);
 }
 
+// Convert a Firestore Timestamp, ISO string, or Date to an ISO string.
+// Handles both SDK Timestamp objects and REST API timestamp strings.
+function toISOString(value: unknown): string {
+  if (!value) return "";
+  // Firestore SDK Timestamp object (has toDate method)
+  if (typeof value === "object" && value !== null && "toDate" in value) {
+    return (value as { toDate: () => Date }).toDate().toISOString();
+  }
+  // Already a string — try parsing
+  if (typeof value === "string") {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? value : d.toISOString();
+  }
+  // Firestore REST API returns { seconds, nanoseconds }
+  if (typeof value === "object" && value !== null && "seconds" in value) {
+    const s = value as { seconds: number; nanoseconds?: number };
+    return new Date(s.seconds * 1000 + (s.nanoseconds ?? 0) / 1e6).toISOString();
+  }
+  return "";
+}
+
 export async function fetchMessages(): Promise<ContactMessage[]> {
   const snap = await getDocs(collection(db, "messages"));
   return snap.docs
@@ -659,10 +711,10 @@ export async function fetchMessages(): Promise<ContactMessage[]> {
         subject: String(data.subject || ""),
         type: String(data.type || ""),
         message: String(data.message || ""),
-        createdAt: String(data.createdAt || ""),
+        createdAt: toISOString(data.createdAt),
         replied: Boolean(data.replied),
         reply: String(data.reply || ""),
-        repliedAt: String(data.repliedAt || ""),
+        repliedAt: toISOString(data.repliedAt),
       };
     })
     .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
@@ -705,22 +757,12 @@ export async function replyToMessage(
     // Cloud Function not deployed yet — fall through
   }
 
-  // Fallback: save to Firestore directly
+  // Fallback: save to Firestore directly + send email via Cloud Function
   await updateDoc(doc(db, "messages", id), {
     reply: reply.trim(),
     replied: true,
     repliedAt: serverTimestamp(),
   });
-
-  // Send reply email via EmailJS (client-side fallback)
-  if (clientMeta?.email) {
-    void sendReplyEmailJS({
-      visitorEmail: clientMeta.email,
-      subject: clientMeta.subject,
-      reply: reply.trim(),
-      originalMessage: clientMeta.originalMessage,
-    });
-  }
 }
 
 export { authError };

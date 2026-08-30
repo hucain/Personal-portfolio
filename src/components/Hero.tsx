@@ -1,7 +1,8 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowDownRight, ArrowDown, FileText, MapPin, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { profile, stats } from "../data";
+import { profile, stats as defaultStats } from "../data";
+import { fallbackStack, watchStack } from "../content";
 import { Badge, fadeUp, stagger } from "./ui";
 
 function Typewriter({ text, delay = 0 }: { text: string; delay?: number }) {
@@ -41,10 +42,33 @@ function CountUp({
   duration?: number;
   suffix?: string;
 }) {
-  const [count, setCount] = useState(0);
+  const [count, setCount] = useState(target);
   const ref = useRef<HTMLSpanElement>(null);
   const hasAnimated = useRef(false);
+  const prevTarget = useRef(target);
 
+  // When target changes after initial animation, animate to the new value
+  useEffect(() => {
+    if (prevTarget.current === target) return;
+    prevTarget.current = target;
+    // Skip if hasn't animated yet — the intersection observer will handle it
+    if (!hasAnimated.current) return;
+    const start = performance.now();
+    const from = count;
+    const tick = (now: number) => {
+      const elapsed = (now - start) / (duration * 1000);
+      if (elapsed >= 1) {
+        setCount(target);
+        return;
+      }
+      const eased = 1 - Math.pow(1 - elapsed, 3);
+      setCount(Math.round(from + (target - from) * eased));
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [target, duration]);
+
+  // Initial animation when element enters viewport
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
@@ -60,7 +84,6 @@ function CountUp({
               setCount(target);
               return;
             }
-            // Ease-out cubic
             const eased = 1 - Math.pow(1 - elapsed, 3);
             setCount(Math.round(target * eased));
             requestAnimationFrame(tick);
@@ -128,6 +151,17 @@ export function Hero({ onResume }: { onResume: () => void }) {
   const heroY = useTransform(scrollYProgress, [0, 1], [0, -120]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 0.7], [1, 0.96]);
+
+  // Dynamic stack count from Firestore
+  const [stackCount, setStackCount] = useState(fallbackStack.length);
+  useEffect(() => {
+    return watchStack((items) => setStackCount(items.length));
+  }, []);
+
+  // Replace the hardcoded "7" with the live stack count
+  const stats = defaultStats.map((s) =>
+    s.label === "Tools I reach for" ? { ...s, value: String(stackCount) } : s,
+  );
 
   return (
     <section

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { seedAll } from "../content";
+import { validateSession, clearSession, disableAdminContextMenu } from "../security";
 import { CertificatesPanel } from "./CertificatesPanel";
 import { ContactPanel } from "./ContactPanel";
 import {
@@ -91,9 +92,16 @@ export function AdminApp() {
 
   useEffect(() => {
     const unsubscribe = watchAuth(async (user) => {
-      // UI gate only. The authoritative admin boundary is the Firestore Rules,
-      // which require the custom claim `admin: true` on the verified ID token.
       if (user) {
+        // Validate session fingerprint before granting access
+        const session = validateSession();
+        if (!session.valid) {
+          await adminSignOut();
+          clearSession();
+          setAllowed(false);
+          setReady(true);
+          return;
+        }
         setAllowed(await hasAdminClaim(user));
       } else {
         setAllowed(false);
@@ -103,12 +111,20 @@ export function AdminApp() {
     return unsubscribe;
   }, []);
 
-  // Periodic admin claim re-verification (every 5 minutes)
+  // Periodic admin claim re-verification + session fingerprint check (every 5 minutes)
   useEffect(() => {
     if (!allowed) return;
     const interval = setInterval(async () => {
       const user = auth.currentUser;
       if (!user) {
+        setAllowed(false);
+        return;
+      }
+      // Re-validate session fingerprint
+      const session = validateSession();
+      if (!session.valid) {
+        await adminSignOut();
+        clearSession();
         setAllowed(false);
         return;
       }
@@ -121,7 +137,7 @@ export function AdminApp() {
     return () => clearInterval(interval);
   }, [allowed]);
 
-  // Automatic Vault Lock on Inactivity
+  // Automatic Vault Lock on Inactivity + Right-Click Prevention
   useEffect(() => {
     if (!allowed) return;
     let lastActive = Date.now();
@@ -134,6 +150,17 @@ export function AdminApp() {
     const events = ["mousemove", "keydown", "click", "touchstart", "scroll"];
     events.forEach((evt) => window.addEventListener(evt, resetIdle, { passive: true }));
 
+    // Disable right-click in admin dashboard
+    const removeContextMenu = disableAdminContextMenu();
+
+    // Disable text selection on sensitive areas
+    const disableSelect = (e: Event) => {
+      if ((e.target as HTMLElement).closest(".no-select")) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("selectstart", disableSelect);
+
     const timer = setInterval(() => {
       const remaining = Math.max(
         0,
@@ -142,12 +169,15 @@ export function AdminApp() {
       setIdleSecondsLeft(remaining);
       if (remaining === 0) {
         void adminSignOut();
+        clearSession();
       }
     }, 1000);
 
     return () => {
       clearInterval(timer);
       events.forEach((evt) => window.removeEventListener(evt, resetIdle));
+      removeContextMenu();
+      document.removeEventListener("selectstart", disableSelect);
     };
   }, [allowed]);
 
@@ -217,7 +247,7 @@ export function AdminApp() {
             </a>
             <button
               type="button"
-              onClick={() => void adminSignOut()}
+              onClick={() => { clearSession(); void adminSignOut(); }}
               className="inline-flex items-center gap-1.5 rounded-full border border-highlight/25 bg-highlight/10 px-3.5 py-2 text-xs font-semibold text-highlight transition hover:bg-highlight/20"
             >
               <LogOut className="h-3.5 w-3.5" />

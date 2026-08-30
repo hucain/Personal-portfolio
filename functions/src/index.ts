@@ -150,6 +150,44 @@ function replyEmailHtml(
   `;
 }
 
+function confirmationEmailHtml(
+  visitorName: string,
+  subject: string,
+): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"><style>${baseStyles()}</style></head>
+    <body>
+      <div class="container">
+        <div class="card">
+          <div class="label">Message Received</div>
+          <div class="heading">Thank you, ${escapeHtml(visitorName)}!</div>
+
+          <p class="text">
+            Your message regarding <strong>${escapeHtml(subject)}</strong> has been received successfully.
+          </p>
+
+          <hr class="divider">
+
+          <p class="text">
+            I review every message personally and will get back to you as soon as possible — usually within a day.
+          </p>
+
+          <p class="text" style="margin-top: 20px">
+            Best regards,<br>
+            <strong style="color: #f3efe6">M. Hussain Umer</strong><br>
+            <span style="color: #a8a29a; font-size: 13px">AI Web Developer & Frontend Specialist</span>
+          </p>
+
+          <div class="footer">M. Hussain Umer Portfolio</div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 function replySentCopyHtml(
   visitorName: string,
   visitorEmail: string,
@@ -320,9 +358,11 @@ export const handleContactForm = onRequest(
         ip,
       });
 
-      // Send email notification to admin via Gmail SMTP
+      // Send email notifications via Gmail SMTP
       try {
         const transporter = getTransporter();
+
+        // 1. Notification email to admin
         await transporter.sendMail({
           from: `"Portfolio Contact Form" <${ADMIN_EMAIL.value()}>`,
           to: ADMIN_EMAIL.value(),
@@ -331,9 +371,20 @@ export const handleContactForm = onRequest(
           html: notificationEmailHtml(data.name, data.email, data.subject, data.type, data.message, docId),
           text: `New inquiry from ${data.name} (${data.email})\nType: ${data.type}\nSubject: ${data.subject}\n\n${data.message}`,
         });
-        console.log(`✅ Notification email sent for ${docId}`);
+        console.log(`✅ Notification email sent to admin for ${docId}`);
+
+        // 2. Confirmation email to client
+        await transporter.sendMail({
+          from: `"M. Hussain Umer" <${ADMIN_EMAIL.value()}>`,
+          to: data.email,
+          subject: `Message Received — ${data.subject}`,
+          html: confirmationEmailHtml(data.name, data.subject),
+          text: `Hi ${data.name},\n\nYour message regarding "${data.subject}" has been received successfully.\n\nI review every message personally and will get back to you as soon as possible — usually within a day.\n\nBest regards,\nM. Hussain Umer\nAI Web Developer & Frontend Specialist`,
+        });
+        console.log(`✅ Confirmation email sent to ${data.email} for ${docId}`);
       } catch (emailErr) {
-        console.error("❌ Notification email failed:", emailErr);
+        console.error("❌ Email delivery failed:", emailErr);
+        // Firestore message is already saved — email failure does not delete it
       }
 
       res.status(201).json({

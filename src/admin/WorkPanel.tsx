@@ -65,7 +65,7 @@ export function WorkPanel() {
           .split("\n")
           .map((line) => line.trim())
           .filter(Boolean),
-        order: roles.length,
+        order: roleEdit ? (roles.find((r) => r.id === roleEdit)?.order ?? roles.length) : roles.length,
       };
       if (roleEdit) {
         await saveDoc("workRoles", roleEdit, payload);
@@ -97,7 +97,7 @@ export function WorkPanel() {
       const payload = {
         title: focusForm.title.trim(),
         detail: focusForm.detail.trim(),
-        order: focus.length,
+        order: focusEdit ? (focus.find((f) => f.id === focusEdit)?.order ?? focus.length) : focus.length,
       };
       if (focusEdit) {
         await saveDoc("workFocus", focusEdit, payload);

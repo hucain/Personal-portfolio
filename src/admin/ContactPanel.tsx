@@ -15,6 +15,8 @@ const empty = {
   label: "",
   value: "",
   icon: "Mail",
+  iconOptions: "Mail",
+  iconCustom: "",
   order: 0,
 };
 
@@ -24,6 +26,7 @@ const iconOptions = [
   { key: "Clock3", label: "Clock" },
   { key: "Phone", label: "Phone" },
   { key: "Globe", label: "Globe" },
+  { key: "custom", label: "Custom (emoji or text)" },
 ];
 
 export function ContactPanel() {
@@ -56,10 +59,13 @@ export function ContactPanel() {
 
   const openEdit = (item: ContactInfoItem) => {
     setEditing(item.id);
+    const isCustom = !iconOptions.some((opt) => opt.key === item.icon);
     setForm({
       label: item.label,
       value: item.value,
       icon: item.icon || "Mail",
+      iconOptions: isCustom ? "custom" : item.icon,
+      iconCustom: isCustom ? item.icon : "",
       order: item.order ?? 0,
     });
     setError("");
@@ -171,7 +177,7 @@ export function ContactPanel() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-gold/25 bg-gold/10 text-gold">
-                      {item.icon === "MapPin" ? <MapPin className="h-4 w-4" /> : <AtSign className="h-4 w-4" />}
+                      {item.icon === "MapPin" ? <MapPin className="h-4 w-4" /> : item.icon === "Mail" ? <AtSign className="h-4 w-4" /> : item.icon === "Phone" ? <AtSign className="h-4 w-4" /> : item.icon === "Globe" ? <AtSign className="h-4 w-4" /> : item.icon === "Clock3" ? <AtSign className="h-4 w-4" /> : <span className="text-lg" role="img" aria-label={item.label}>{item.icon}</span>}
                     </span>
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
                       {item.label}
@@ -254,8 +260,15 @@ export function ContactPanel() {
                     </span>
                     <select
                       className="field font-sans text-sm"
-                      value={form.icon}
-                      onChange={(event) => setForm((f) => ({ ...f, icon: event.target.value }))}
+                      value={form.iconOptions === "custom" ? "custom" : form.icon}
+                      onChange={(event) => {
+                        const val = event.target.value;
+                        if (val === "custom") {
+                          setForm((f) => ({ ...f, iconOptions: "custom", icon: f.iconCustom || "\u2709" }));
+                        } else {
+                          setForm((f) => ({ ...f, iconOptions: val, icon: val }));
+                        }
+                      }}
                     >
                       {iconOptions.map((opt) => (
                         <option key={opt.key} value={opt.key}>
@@ -271,6 +284,13 @@ export function ContactPanel() {
                     onChange={(value) => setForm((f) => ({ ...f, order: Number(value) }))}
                   />
                 </div>
+                {form.iconOptions === "custom" ? (
+                  <Field
+                    label="Custom Icon (emoji or text, e.g. \u2709 \ud83d\udce7 \ud83d\udccd)"
+                    value={form.iconCustom || ""}
+                    onChange={(val) => setForm((f) => ({ ...f, iconCustom: val, icon: val || "\u2709" }))}
+                  />
+                ) : null}
 
                 {error ? <p className="text-xs font-medium text-highlight">{error}</p> : null}
 

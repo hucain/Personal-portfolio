@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useToast } from "../components/ui";
-import { openGmailReply, sendReplyEmailJS } from "../emailjs";
+import { sendReplyEmailJS } from "../emailjs";
 import {
   deleteMessage,
   fetchMessages,
@@ -22,6 +22,18 @@ import {
   type ContactMessage,
 } from "../firebase";
 import { sanitizeHTML } from "../security";
+
+/** Open Google Workspace (Gmail) compose with pre-filled fields */
+function openGmailReply(to: string, subject: string, body: string) {
+  const params = new URLSearchParams({
+    view: "cm",
+    fs: "1",
+    to,
+    su: `Re: ${subject}`,
+    body,
+  });
+  window.open(`https://mail.google.com/mail/?${params.toString()}`, "_blank", "noopener,noreferrer");
+}
 
 export function MessagesPanel() {
   const [items, setItems] = useState<ContactMessage[]>([]);
@@ -82,12 +94,12 @@ export function MessagesPanel() {
 
   const [directSentToast, setDirectSentToast] = useState("");
 
-  const onSendReply = async (mode: "direct" | "gmail" | "mailto") => {
+  const onSendReply = async () => {
     if (!active?.id || replyText.trim().length < 2) return;
     setBusy(true);
     setDirectSentToast("");
     try {
-      // Save reply to Firestore + try Cloud Function email
+      // Save reply to Firestore + send email to client via EmailJS (free)
       await replyToMessage(active.id, replyText, {
         email: active.email,
         name: active.name,
@@ -95,35 +107,15 @@ export function MessagesPanel() {
         originalMessage: active.message,
       });
 
-      // Also try EmailJS (client-side email)
-      const emailSent = await sendReplyEmailJS({
+      // Send reply email to client via EmailJS (free, no popup)
+      void sendReplyEmailJS({
         visitorEmail: active.email,
         subject: active.subject,
         reply: replyText.trim(),
         originalMessage: active.message,
       });
 
-      const replyBody = replyText.trim();
-
-      if (mode === "gmail" || (!emailSent && mode === "direct")) {
-        // Open Gmail compose as backup or when user explicitly requests
-        openGmailReply({
-          visitorEmail: active.email,
-          visitorName: active.name,
-          subject: active.subject,
-          reply: replyBody,
-        });
-        setDirectSentToast(emailSent
-          ? `✓ Email sent to ${active.email}. Gmail opened for notes.`
-          : `✓ Reply saved. Gmail opened to send to ${active.email}.`);
-      } else if (mode === "mailto") {
-        window.location.href = `mailto:${active.email}?subject=${encodeURIComponent(
-          `Re: ${active.subject}`,
-        )}&body=${encodeURIComponent(replyBody)}`;
-        setDirectSentToast(`✓ Reply saved. Opening mail app to send to ${active.email}.`);
-      } else {
-        setDirectSentToast(`✓ Email sent to ${active.email}`);
-      }
+      setDirectSentToast(`✓ Reply saved and sent to ${active.email}`);
 
       setItems((list) =>
         list.map((item) =>
@@ -139,6 +131,13 @@ export function MessagesPanel() {
     } finally {
       setBusy(false);
     }
+  };
+
+  /** Open Google Workspace to reply directly in Gmail */
+  const onOpenGmailReply = () => {
+    if (!active) return;
+    const body = replyText.trim() || `Hi ${active.name.split(" ")[0]},\n\nThanks for reaching out about ${active.subject}.\n\n`;
+    openGmailReply(active.email, active.subject, body);
   };
 
   return (
@@ -279,16 +278,37 @@ export function MessagesPanel() {
                     </a>
                   </div>
 
-                  <span className="text-xs text-muted/70">
-                    {item.createdAt
-                      ? new Date(item.createdAt).toLocaleDateString("en-US", {
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-xs font-medium text-ink/80">
+                      {item.createdAt
+                        ? new Date(item.createdAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : "Recent"}
+                    </span>
+                    <span className="text-[11px] text-muted/60">
+                      {item.createdAt
+                        ? new Date(item.createdAt).toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          })
+                        : ""}
+                    </span>
+                    {item.repliedAt ? (
+                      <span className="text-[10px] text-emerald-500/70">
+                        Replied {new Date(item.repliedAt).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
+                        })} {new Date(item.repliedAt).toLocaleTimeString("en-US", {
                           hour: "2-digit",
                           minute: "2-digit",
-                        })
-                      : "Recent"}
-                  </span>
+                        })}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="mt-4 rounded-2xl border border-ink/10 bg-canvas/70 p-4">
@@ -318,35 +338,55 @@ export function MessagesPanel() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.97 }}
                       onClick={() => {
-                        setActive(item);
-                        setReplyText(
-                          item.reply ||
-                            `Hi ${item.name.split(" ")[0]},\n\nThanks for reaching out about ${item.subject}. `,
-                        );
+                        if (item.replied) {
+                          // Already replied — open modal to view/update saved reply
+                          setActive(item);
+                          setReplyText(item.reply || "");
+                        } else {
+                          // New reply — redirect to Google Workspace
+                          openGmailReply(
+                            item.email,
+                            item.subject,
+                            `Hi ${item.name.split(" ")[0]},\n\nThanks for reaching out about ${item.subject}.\n\n`,
+                          );
+                        }
                       }}
                       className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-xs font-semibold text-canvas transition hover:bg-gold"
                     >
                       <MessageSquareReply className="h-3.5 w-3.5" />
                       {item.replied ? "View / Update Reply" : "Compose Reply"}
                     </motion.button>
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => {
-                        openGmailReply({
-                          visitorEmail: item.email,
-                          visitorName: item.name,
-                          subject: item.subject,
-                          reply: item.reply ||
-                            `Hi ${item.name.split(" ")[0]},\n\nThanks for reaching out about ${item.subject}.`,
-                        });
-                      }}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3.5 py-2 text-xs font-medium text-gold transition hover:bg-gold/20"
-                    >
-                      <Mail className="h-3 w-3" />
-                      <span>Reply in Gmail</span>
-                    </motion.button>
+                    {!item.replied ? (
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={async () => {
+                          if (!item.id) return;
+                          if (!window.confirm("Mark this message as replied?")) return;
+                          try {
+                            await replyToMessage(item.id, "Replied via Google Workspace", {
+                              email: item.email,
+                              name: item.name,
+                              subject: item.subject,
+                              originalMessage: item.message,
+                            });
+                            setItems((list) =>
+                              list.map((m) =>
+                                m.id === item.id ? { ...m, replied: true, reply: "Replied via Google Workspace" } : m,
+                              ),
+                            );
+                            toast(`Marked as replied — ${item.email}`);
+                          } catch {
+                            toast("Could not update status.", "error");
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-[11px] font-semibold text-emerald-400 transition hover:bg-emerald-500/20"
+                      >
+                        <CheckCircle2 className="h-3 w-3" />
+                        Mark Replied
+                      </motion.button>
+                    ) : null}
                   </div>
 
                   <button
@@ -432,10 +472,20 @@ export function MessagesPanel() {
                 </button>
                 <motion.button
                   type="button"
+                  onClick={onOpenGmailReply}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-5 py-2.5 text-xs font-semibold text-accent transition hover:bg-accent/20"
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                  <span>Open in Gmail</span>
+                </motion.button>
+                <motion.button
+                  type="button"
                   disabled={busy || replyText.trim().length < 2}
                   whileHover={{ y: -2 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => void onSendReply("direct")}
+                  onClick={() => void onSendReply()}
                   className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-gold to-accent px-5 py-2.5 text-xs font-semibold text-canvas shadow-md disabled:opacity-50"
                 >
                   {busy ? (
@@ -443,18 +493,7 @@ export function MessagesPanel() {
                   ) : (
                     <Send className="h-3.5 w-3.5" />
                   )}
-                  <span>Send Email to Client</span>
-                </motion.button>
-                <motion.button
-                  type="button"
-                  disabled={busy || replyText.trim().length < 2}
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => void onSendReply("gmail")}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-4 py-2.5 text-xs font-semibold text-gold transition hover:bg-gold/20 disabled:opacity-50"
-                >
-                  <Mail className="h-3.5 w-3.5" />
-                  <span>Reply via Gmail</span>
+                  <span>Save Reply</span>
                 </motion.button>
               </div>
             </motion.div>

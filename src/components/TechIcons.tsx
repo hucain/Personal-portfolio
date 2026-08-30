@@ -59,9 +59,22 @@ export function TechGlyph({ name }: { name: string }) {
         </svg>
       );
     default:
+      // Custom icon — render the key as stylized text (e.g. "PY", "RB", "GO")
       return (
         <svg {...common}>
-          <circle cx="16" cy="16" r="9" stroke="currentColor" strokeWidth="1.6" />
+          <circle cx="16" cy="16" r="13" stroke="currentColor" strokeWidth="1.2" opacity={0.3} />
+          <text
+            x="16"
+            y="17"
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="currentColor"
+            fontSize={name.length > 2 ? "10" : "12"}
+            fontWeight="700"
+            fontFamily="system-ui, sans-serif"
+          >
+            {name.slice(0, 3).toUpperCase()}
+          </text>
         </svg>
       );
   }
