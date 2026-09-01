@@ -1,0 +1,72 @@
+[debug] [2026-08-28T18:28:23.949Z] ----------------------------------------------------------------------
+[debug] [2026-08-28T18:28:23.952Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\win 11\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions
+[debug] [2026-08-28T18:28:23.952Z] CLI Version:   15.28.2
+[debug] [2026-08-28T18:28:23.953Z] Platform:      win32
+[debug] [2026-08-28T18:28:23.953Z] Node Version:  v24.18.0
+[debug] [2026-08-28T18:28:23.953Z] Detected Agent: unknown
+[debug] [2026-08-28T18:28:23.953Z] Time:          Fri Aug 28 2026 23:28:23 GMT+0500 (Pakistan Standard Time)
+[debug] [2026-08-28T18:28:23.953Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-08-28T18:28:27.411Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-28T18:28:27.412Z] > authorizing via signed-in user (hucainomar490@gmail.com)
+[debug] [2026-08-28T18:28:27.412Z] [iam] checking project portfolio-8be6c for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2026-08-28T18:28:27.445Z] Checked if tokens are valid: true, expires at: 1787943487733
+[debug] [2026-08-28T18:28:27.445Z] Checked if tokens are valid: true, expires at: 1787943487733
+[debug] [2026-08-28T18:28:27.447Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/portfolio-8be6c:testIamPermissions [none]
+[debug] [2026-08-28T18:28:27.447Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/portfolio-8be6c:testIamPermissions  x-goog-user-project=portfolio-8be6c
+[debug] [2026-08-28T18:28:27.448Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/portfolio-8be6c:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-08-28T18:28:29.550Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/portfolio-8be6c:testIamPermissions 200
+[debug] [2026-08-28T18:28:29.550Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/portfolio-8be6c:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-08-28T18:28:29.551Z] Checked if tokens are valid: true, expires at: 1787943487733
+[debug] [2026-08-28T18:28:29.551Z] Checked if tokens are valid: true, expires at: 1787943487733
+[debug] [2026-08-28T18:28:29.552Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/portfolio-8be6c/serviceAccounts/portfolio-8be6c@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2026-08-28T18:28:29.552Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/portfolio-8be6c/serviceAccounts/portfolio-8be6c@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-08-28T18:28:31.658Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/portfolio-8be6c/serviceAccounts/portfolio-8be6c@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2026-08-28T18:28:31.658Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/portfolio-8be6c/serviceAccounts/portfolio-8be6c@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[info] 
+[info] === Deploying to 'portfolio-8be6c'...
+[info] 
+[info] i  deploying functions 
+[info] Running command: npm --prefix "$RESOURCE_DIR" run build
+[info] +  functions: Finished running predeploy script. 
+[debug] [2026-08-28T18:28:37.877Z] Checked if tokens are valid: true, expires at: 1787943487733
+[debug] [2026-08-28T18:28:37.878Z] Checked if tokens are valid: true, expires at: 1787943487733
+[debug] [2026-08-28T18:28:37.878Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/portfolio-8be6c [none]
+[debug] [2026-08-28T18:28:39.990Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/portfolio-8be6c 200
+[debug] [2026-08-28T18:28:39.991Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/portfolio-8be6c {"projectNumber":"410226207003","projectId":"portfolio-8be6c","lifecycleState":"ACTIVE","name":"Portfolio","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2026-08-24T15:33:19.301Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[debug] [2026-08-28T18:28:39.998Z] Checked if tokens are valid: true, expires at: 1787943487733
+[debug] [2026-08-28T18:28:39.998Z] Checked if tokens are valid: true, expires at: 1787943487733
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2026-08-28T18:28:40.000Z] Checked if tokens are valid: true, expires at: 1787943487733
+[debug] [2026-08-28T18:28:40.000Z] Checked if tokens are valid: true, expires at: 1787943487733
+[debug] [2026-08-28T18:28:40.001Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/cloudbuild.googleapis.com [none]
+[debug] [2026-08-28T18:28:40.002Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/cloudbuild.googleapis.com  x-goog-user-project=portfolio-8be6c
+[debug] [2026-08-28T18:28:40.007Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/artifactregistry.googleapis.com [none]
+[debug] [2026-08-28T18:28:40.007Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/artifactregistry.googleapis.com  x-goog-user-project=portfolio-8be6c
+[debug] [2026-08-28T18:28:40.734Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/artifactregistry.googleapis.com 200
+[debug] [2026-08-28T18:28:40.734Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/artifactregistry.googleapis.com [omitted]
+[warn] !  artifactregistry: missing required API artifactregistry.googleapis.com. Enabling now... 
+[debug] [2026-08-28T18:28:40.761Z] Checked if tokens are valid: true, expires at: 1787943487733
+[debug] [2026-08-28T18:28:40.761Z] Checked if tokens are valid: true, expires at: 1787943487733
+[debug] [2026-08-28T18:28:40.762Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/artifactregistry.googleapis.com:enable [none]
+[debug] [2026-08-28T18:28:40.763Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/artifactregistry.googleapis.com:enable  x-goog-user-project=portfolio-8be6c
+[debug] [2026-08-28T18:28:41.262Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/artifactregistry.googleapis.com:enable 400
+[debug] [2026-08-28T18:28:41.263Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/artifactregistry.googleapis.com:enable [omitted]
+[debug] [2026-08-28T18:28:42.292Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/cloudbuild.googleapis.com 200
+[debug] [2026-08-28T18:28:42.292Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/cloudbuild.googleapis.com [omitted]
+[warn] !  functions: missing required API cloudbuild.googleapis.com. Enabling now... 
+[debug] [2026-08-28T18:28:42.307Z] Checked if tokens are valid: true, expires at: 1787943487733
+[debug] [2026-08-28T18:28:42.307Z] Checked if tokens are valid: true, expires at: 1787943487733
+[debug] [2026-08-28T18:28:42.307Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/cloudbuild.googleapis.com:enable [none]
+[debug] [2026-08-28T18:28:42.308Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/cloudbuild.googleapis.com:enable  x-goog-user-project=portfolio-8be6c
+[debug] [2026-08-28T18:28:42.902Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/cloudbuild.googleapis.com:enable 400
+[debug] [2026-08-28T18:28:42.902Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/portfolio-8be6c/services/cloudbuild.googleapis.com:enable [omitted]
+[debug] [2026-08-28T18:28:46.304Z] Error: Timed out.
+    at Timeout._onTimeout (C:\Users\win 11\AppData\Roaming\npm\node_modules\firebase-tools\lib\utils.js:296:49)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+[error] 
+[error] Error: An unexpected error has occurred.
