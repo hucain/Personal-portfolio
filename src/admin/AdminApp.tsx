@@ -32,6 +32,7 @@ import { ProjectsPanel } from "./ProjectsPanel";
 import { StackPanel } from "./StackPanel";
 import { WorkPanel } from "./WorkPanel";
 import { useToast } from "../components/ui";
+import { LOGO_URI, LOGO_SMALL_URI } from "../assets";
 
 type Tab = "messages" | "projects" | "stack" | "work" | "certificates" | "contact";
 
@@ -190,7 +191,7 @@ export function AdminApp() {
           className="flex flex-col items-center gap-3"
         >
           <img
-            src="/logo.png"
+            src={LOGO_URI}
             alt="HU logo"
             className="h-12 w-12 rounded-2xl object-contain"
             width={48}
@@ -213,7 +214,7 @@ export function AdminApp() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6">
           <div className="flex items-center gap-3">
             <img
-              src="/logo.png"
+              src={LOGO_SMALL_URI}
               alt="HU logo"
               className="h-9 w-9 rounded-xl object-contain"
               width={36}
@@ -506,7 +507,7 @@ function LoginScreen() {
       >
         <div className="flex items-center justify-between">
           <img
-            src="/logo.png"
+            src={LOGO_URI}
             alt="HU logo"
             className="h-12 w-12 rounded-2xl object-contain shadow-sm"
             width={48}

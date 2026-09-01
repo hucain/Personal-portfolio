@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { profile } from "../data";
+import { LOGO_URI } from "../assets";
 
 export function Footer() {
   return (
@@ -13,7 +14,8 @@ export function Footer() {
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
       <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-3 text-sm text-muted sm:flex-row sm:items-center">
         <a href="#top" className="transition-transform hover:scale-105">
-          <img              src="/favicon.png"
+          <img
+            src={LOGO_URI}
             alt="HU logo"
             className="h-8 w-8 rounded-lg object-contain"
             width={32}

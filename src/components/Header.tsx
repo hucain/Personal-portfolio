@@ -3,6 +3,7 @@ import { Mail, Menu, X } from "lucide-react";
 import { useEffect, useState, type MouseEvent } from "react";
 import { grantAdminAccess } from "../admin/AdminApp";
 import { navLinks } from "../data";
+import { LOGO_URI } from "../assets";
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -93,7 +94,7 @@ export function Header() {
             aria-label="Back to top"
           >
             <img
-              src="/favicon.png"
+              src={LOGO_URI}
               alt="HU logo"
               className="h-10 w-10 rounded-xl object-contain"
               width={40}
